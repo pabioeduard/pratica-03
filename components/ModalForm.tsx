@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, View, StyleSheet, TextInput } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import { Modal, View } from 'react-native';
+import { TextInput, Button } from 'react-native-paper';
 import { addProduto, updateProduto } from '../database/Database';
+import { Produto } from '../types/type'; 
 
 interface ModalFormProps {
   visible: boolean;
   onClose: () => void;
-  onSave: () => void;
-  editingItem: any | null;
+  reload: () => void;
+  editingItem: Produto | null;
 }
 
-export const ModalForm: React.FC<ModalFormProps> = ({ visible, onClose, onSave, editingItem }) => {
+export function ModalForm({ visible, onClose, reload, editingItem }: ModalFormProps) {
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
 
@@ -25,77 +26,39 @@ export const ModalForm: React.FC<ModalFormProps> = ({ visible, onClose, onSave, 
   }, [editingItem]);
 
   const handleSave = () => {
-    if (nome && preco) {
-      if (editingItem) {
-        updateProduto(editingItem.id, nome, parseFloat(preco), () => {
-          onSave();
-          onClose();
-        });
-      } else {
-        addProduto(nome, parseFloat(preco), () => {
-          onSave();
-          onClose();
-        });
-      }
+    const parsedPreco = parseFloat(preco);
+    if (editingItem) {
+      updateProduto(editingItem.id, nome, parsedPreco, () => {
+        reload();
+        onClose();
+      });
+    } else {
+      addProduto(nome, parsedPreco, () => {
+        reload();
+        onClose();
+      });
     }
   };
 
   return (
-    <Modal visible={visible} onRequestClose={onClose} transparent animationType="slide">
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>{editingItem ? 'Editar Produto' : 'Cadastrar Produto'}</Text>
-          <TextInput
-            style={styles.input}
-            label="Nome do Produto"
-            value={nome}
-            onChangeText={setNome}
-            mode="outlined"
-          />
-          <TextInput
-            style={styles.input}
-            label="Preço"
-            value={preco}
-            keyboardType="numeric"
-            onChangeText={setPreco}
-            mode="outlined"
-          />
-          <Button mode="contained" onPress={handleSave} style={styles.button}>
-            Salvar
-          </Button>
-          <Button mode="outlined" onPress={onClose} style={styles.button}>
-            Cancelar
-          </Button>
-        </View>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent>
+      <View style={{ flex: 1, backgroundColor: '#fff', padding: 20, marginTop: 100 }}>
+        <TextInput label="Nome" value={nome} onChangeText={setNome} mode="outlined" style={{ marginBottom: 10 }} />
+        <TextInput
+          label="Preço"
+          value={preco}
+          onChangeText={setPreco}
+          keyboardType="numeric"
+          mode="outlined"
+          style={{ marginBottom: 10 }}
+        />
+        <Button mode="contained" onPress={handleSave}>
+          {editingItem ? 'Salvar Alterações' : 'Adicionar'}
+        </Button>
+        <Button onPress={onClose} style={{ marginTop: 10 }}>
+          Cancelar
+        </Button>
       </View>
     </Modal>
   );
-};
-
-const styles = StyleSheet.create({
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    width: 300,
-    borderRadius: 10,
-    elevation: 10,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  input: {
-    marginBottom: 15,
-  },
-  button: {
-    marginVertical: 5,
-  },
-});
+}

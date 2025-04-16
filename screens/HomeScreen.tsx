@@ -1,70 +1,68 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import { Button, Appbar } from 'react-native-paper';
-import { createTable, getProdutos, deleteProduto } from '../database/Database';
-import { ItemList } from '../components/ItemList';
+import { View, FlatList } from 'react-native';
+import { FAB } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import { createTable, getProdutos } from '../database/Database';
 import { ModalForm } from '../components/ModalForm';
+import { ItemList } from '../components/ItemList';
+import { Produto } from '../types/type'; 
 
-export const HomeScreen = ({ navigation }: any) => {
-  const [produtos, setProdutos] = useState<any[]>([]);
+export function HomeScreen() {
+  const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [editingItem, setEditingItem] = useState<Produto | null>(null);
+
+  const loadProdutos = async () => {
+    await createTable();
+    await getProdutos(setProdutos);
+  };
 
   useEffect(() => {
-    createTable();
     loadProdutos();
   }, []);
 
-  const loadProdutos = () => {
-    getProdutos(setProdutos);
-  };
-
-  const handleDelete = (id: number) => {
-    Alert.alert(
-      'Excluir Produto',
-      'Tem certeza que deseja excluir este produto?',
-      [
-        { text: 'Cancelar' },
-        { text: 'Excluir', onPress: () => deleteProduto(id, loadProdutos) },
-      ]
-    );
-  };
-
-  const handleEdit = (item: any) => {
-    setEditingItem(item);
-    setModalVisible(true);
-  };
-
-  const handleCloseModal = () => {
-    setEditingItem(null);
-    setModalVisible(false);
-  };
-
   return (
-    <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="Produtos" />
-      </Appbar.Header>
-      <Button mode="contained" onPress={() => setModalVisible(true)} style={styles.addButton}>
-        Adicionar Produto
-      </Button>
-      <ItemList
-        items={produtos}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onItemPress={(item: any) => navigation.navigate('ItemDetail', { item })}
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={produtos}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <ItemList
+            item={item}
+            onEdit={(produto) => {
+              setEditingItem(produto);
+              setModalVisible(true);
+            }}
+            onPress={() => navigation.navigate('ItemDetail', { item })}
+            reload={loadProdutos}
+          />
+        )}
       />
-      <ModalForm visible={modalVisible} onClose={handleCloseModal} onSave={loadProdutos} editingItem={editingItem} />
+
+      <FAB
+        icon="plus"
+        style={{
+          position: 'absolute',
+          margin: 16,
+          right: 0,
+          bottom: 0,
+        }}
+        onPress={() => {
+          setEditingItem(null);
+          setModalVisible(true);
+        }}
+      />
+
+      <ModalForm
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+          setEditingItem(null);
+        }}
+        reload={loadProdutos}
+        editingItem={editingItem}
+      />
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  addButton: {
-    marginBottom: 20,
-  },
-});
+}
